@@ -60,3 +60,11 @@ The wrapper runs the sibling HTTP suite; use a Python with TLS 1.3 support.
 `ZEN_COMPILER`, `ZEN_STD`, `GO_BIN` and `PYTHON` are forwarded unchanged. These
 checks do not establish production readiness, a security audit or a throughput
 improvement. The initial extraction preserves the previous files byte-for-byte.
+
+## Extracted-package validation
+
+The complete zen-http HTTP/1/TLS/H2 integration suite passes on macOS arm64 and
+Linux x86_64 after extraction, including UBSan and abrupt-disconnect survival.
+Linux tested zen-http `7fac267` with zen-openssl `2e7af76` and std readiness
+`b283fc2d`, reusing the pinned OpenSSL build. This validates the package split;
+it does not claim an upstream OpenSSL test-suite run or warning-free compilation.
