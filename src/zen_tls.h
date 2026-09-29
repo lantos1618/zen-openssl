@@ -1,9 +1,11 @@
 #ifndef ZEN_CRYPTO_TLS_H
 #define ZEN_CRYPTO_TLS_H
-/* OpenSSL ABI adapter. Handles session construction and native const types.
- * The caller keeps each fd open until after zen_tls_free and supplies stable
+/* OpenSSL ABI adapter. Zen owns server session construction and release.
+ * The caller keeps each fd open until after server_free and supplies stable
  * read/write storage across the Zen WANT_READ/WANT_WRITE retries. Single-threaded use
- * per session. These helpers implement no cryptographic primitives. */
+ * per session. Const/callback ABI adapters and the Linux socket BIO remain C;
+ * the BIO enforces borrowed descriptors, retry flags and MSG_NOSIGNAL writes.
+ * Cryptographic operations remain OpenSSL's; these helpers implement none. */
 #include <stdint.h>
 #include <limits.h>
 #include <openssl/ssl.h>
@@ -109,11 +111,4 @@ static int zen_tls_set_fd(SSL *ssl, int fd) {
 #else
 static int zen_tls_set_fd(SSL *ssl, int fd) { return SSL_set_fd(ssl, fd); }
 #endif
-static SSL *zen_tls_accept(SSL_CTX *ctx, int fd) {
-    SSL *ssl = SSL_new(ctx);
-    if (!ssl || zen_tls_set_fd(ssl, fd) != 1) { SSL_free(ssl); return NULL; }
-    SSL_set_accept_state(ssl);
-    return ssl;
-}
-static void zen_tls_free(SSL *ssl) { SSL_free(ssl); }
 #endif

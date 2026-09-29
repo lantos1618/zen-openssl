@@ -51,6 +51,7 @@ Native = c.bind("zen_tls.h", {
     ) i32
     SSL_new = (ctx: Ptr<()>) Ptr<()>
     SSL_free = (ssl: Ptr<()>) ()
+    SSL_set_accept_state = (ssl: Ptr<()>) ()
     zen_tls_set_fd = (ssl: Ptr<()>, fd: i32) i32
     SSL_ctrl = (ssl: Ptr<()>, command: i32, larg: i64, parg: Ptr<()>) i64
     SSL_set_hostflags = (ssl: Ptr<()>, flags: u32) ()
@@ -404,6 +405,30 @@ ServerContext.impl(Drop, {
     drop = (self :: @Self) { Native.SSL_CTX_free(self.handle); }
 })
 
+// Creates a server session borrowing fd; it never closes the descriptor. The
+// caller keeps the context alive during creation and frees the returned session
+// before closing fd. SSL retains its own reference to the context on success.
+// This sets the handshake role; nonblocking I/O drives the actual handshake.
+server_session* = (ctx: Ptr<()>, fd: i32) Ptr<()> {
+    ctx.is_null().match({
+        true  => null_ptr<()>(),
+        false => {
+            session = Native.SSL_new(ctx);
+            session.is_null().match({
+                true  => null_ptr<()>(),
+                false => (Native.zen_tls_set_fd(session, fd) == 1).match({
+                    true  => { Native.SSL_set_accept_state(session); session },
+                    false => { Native.SSL_free(session); null_ptr<()>() },
+                }),
+            })
+        },
+    })
+}
+
+// Releases the session only; null is allowed, matching SSL_free. No blocking
+// close_notify attempt is made for this nonblocking server adapter.
+server_free* = (session: Ptr<()>) { Native.SSL_free(session); }
+
 // Borrowed-session nonblocking operation. The caller keeps the same operation,
 // buffer address and length until a retry succeeds, and owns socket readiness.
 ServerIo* = Bytes(i64) | WantRead | WantWrite | Closed
@@ -472,10 +497,10 @@ select_h2 = (
 server_h2_selected* = (session: Ptr<()>) bool {
     // A session is single-threaded; the borrowed ALPN bytes stay owned by SSL.
     (session.is_null()).match({
-        true => false,
+        true  => false,
         false => (Native.zen_tls_selected_length(session) == 2).match({
             false => false,
-            true => {
+            true  => {
                 selected = Native.zen_tls_selected_data(session);
                 !selected.is_null() && selected.read(0) == 'h' && selected.read(1) == '2'
             },
