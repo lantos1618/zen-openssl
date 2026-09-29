@@ -279,7 +279,7 @@ TlsConnection* = {
         answer
     }
 
-    close* = (self :: @Self) () {
+    close* = (self :: @Self) {
         self.open.then(() {
             self.open = false;
             Native.SSL_shutdown(self.ssl);
@@ -291,7 +291,7 @@ TlsConnection* = {
 }
 
 TlsConnection.impl(Drop, {
-    drop = (self :: @Self) () { self.close() }
+    drop = (self :: @Self) { self.close() }
 })
 
 // TlsFault covers both transports' faults. The union owns the stream it
@@ -343,7 +343,7 @@ read* = (self: Transport, buf :: Vec<u8>, n: usize) Res<usize, TlsFault> {
     })
 }
 
-close* = (self: Transport) () {
+close* = (self: Transport) {
     self.match({
         Tcp(t) => t.close(),
         Tls(t) => t.close(),
@@ -351,7 +351,7 @@ close* = (self: Transport) () {
 }
 
 Transport.impl(Drop, {
-    drop = (self :: @Self) () { self.close() }
+    drop = (self :: @Self) { self.close() }
 })
 
 // Owns server TLS policy and context lifetime. Socket adapters borrow handle.
