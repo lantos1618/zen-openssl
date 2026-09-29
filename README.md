@@ -7,13 +7,14 @@ OpenSSL implements TLS records and cryptography; this is not a native Zen TLS
 or cryptographic implementation.
 
 `src/tls.zen` owns certificate-verification policy, client/server context lifetime,
-ALPN selection and validation, and nonblocking retry decisions. It exports the
+ALPN selection and validation, server-session creation/cleanup and nonblocking
+retry decisions. It exports the
 existing `TlsConnection`, `TlsFault`, `Transport` and `ServerContext` APIs.
 The module remains named `tls`, so consumers change its build dependency path
 without changing protocol imports. Existing `std.net.tls` callers are unchanged.
 
-`src/zen_tls.h` supplies OpenSSL ABI accessors, session construction/cleanup,
-and a Linux borrowed-socket BIO using `MSG_NOSIGNAL`. The latter preserves
+`src/zen_tls.h` supplies OpenSSL const/callback ABI accessors and a Linux
+borrowed-socket BIO using `MSG_NOSIGNAL`. The latter preserves
 abrupt-disconnect protection without changing the process signal handler. It
 contains native I/O logic, not just declarations. It neither closes nor owns the
 socket; callers retain sockets and keep retry buffers stable across TLS retries.
