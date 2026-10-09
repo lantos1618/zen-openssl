@@ -3,7 +3,7 @@
 
 Alloc, AllocError, Ptr, null_ptr = std.mem
 str = std.text
-Res = std.core
+Res, Range = std.core
 Drop = std.core
 Vec = std.collections
 callback = std.native
@@ -310,8 +310,18 @@ tls_error = (e: TcpError) TlsFault {
 }
 
 // `h2` offers ALPN h2 on a secure dial and is ignored on a plain one.
+valid_host = (host: str) bool {
+    valid ::= host.len > 0;
+    Range(0, host.len).loop((i) {
+        byte  = host.index(i);
+        valid = valid && byte > ' ' && byte != 127;
+    });
+    valid
+}
+
 dial* = (a: Alloc, host: str, port: u16, secure: bool, h2: bool)
         Res<Transport, TlsFault> {
+    valid_host(host).ensure(TlsFault.ConnectFailed).try();
     secure.match({
         true  => tls_dial(a, host, port, h2).match({
             Ok(s)  => Ok(Transport.Tls(s)),

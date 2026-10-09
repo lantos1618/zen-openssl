@@ -20,7 +20,9 @@ contains native I/O logic, not just declarations. It neither closes nor owns the
 socket; callers retain sockets and keep retry buffers stable across TLS retries.
 There are no handwritten cryptographic primitives in the adapter.
 
-The client verifies certificate chains and hostnames. Private OpenSSL builds
+The client verifies certificate chains and hostnames. `dial` rejects empty
+hostnames and raw spaces or control bytes before socket lookup or C-string
+conversion, including embedded NUL. Private OpenSSL builds
 need an explicit CA bundle (`SSL_CERT_FILE`/`SSL_CERT_DIR`); the macOS Keychain
 is not loaded automatically. Graceful TLS shutdown, configurable policy and
 client-context reuse remain follow-up work. This package remains experimental.
